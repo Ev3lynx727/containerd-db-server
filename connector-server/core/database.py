@@ -3,6 +3,7 @@ Database connection management for the connector API.
 """
 from typing import AsyncGenerator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -59,7 +60,7 @@ async def test_connection() -> bool:
     """Test async database connection."""
     try:
         async with async_engine.begin() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
         return True
     except Exception:
         return False
@@ -71,10 +72,7 @@ async def get_database_info() -> dict:
         "database_url": async_database_url.replace(
             settings.database_password or "", "***"
         ),
-        "pool_size": async_engine.pool.size(),
-        "checked_out": async_engine.pool.checkedout(),
-        "invalid": async_engine.pool.invalid(),
-        "overflow": async_engine.pool.overflow(),
+        "engine_type": "async",
     }
 
 

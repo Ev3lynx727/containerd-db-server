@@ -19,7 +19,7 @@ def hash_api_key(api_key: str) -> str:
 def create_api_key(
     db: Session,
     client_id: str,
-    scopes: List[str] = None,
+    scopes: Optional[List[str]] = None,
     expires_days: int = 365,
     rate_limit: int = 1000
 ) -> tuple[str, ApiKey]:
