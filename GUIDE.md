@@ -62,7 +62,7 @@ pip install -r requirements.txt
 Start all services with Docker Compose:
 
 ```bash
-docker-compose -f docker-compose.server.yml up --build
+docker compose -f docker-compose.server.yml up --build
 ```
 
 This will:
@@ -84,7 +84,7 @@ curl http://localhost/health
 curl http://localhost/api/v1/health
 
 # View logs
-docker-compose -f docker-compose.server.yml logs -f
+docker compose -f docker-compose.server.yml logs -f
 ```
 
 ## Configuration Details
@@ -172,13 +172,13 @@ Once running, access:
 View service logs:
 ```bash
 # All services
-docker-compose -f docker-compose.server.yml logs -f
+docker compose -f docker-compose.server.yml logs -f
 
 # Specific service
-docker-compose -f docker-compose.server.yml logs -f connector-api
+docker compose -f docker-compose.server.yml logs -f connector-api
 
 # Database logs
-docker-compose -f docker-compose.server.yml logs -f mysql-db
+docker compose -f docker-compose.server.yml logs -f mysql-db
 ```
 
 ### Database Access

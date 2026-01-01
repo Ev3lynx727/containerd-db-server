@@ -16,7 +16,7 @@ This project provides a complete containerized database connector stack includin
 1. Clone the repository
 2. Copy environment file: `cp .env.example .env`
 3. Configure your environment variables
-4. Deploy the stack: `docker-compose -f docker-compose.server.yml up -d`
+4. Deploy the stack: `docker compose -f docker-compose.server.yml up -d`
 
 ## Architecture
 
@@ -34,7 +34,7 @@ The stack integrates with Netdata running on localhost:19999 for comprehensive m
 
 For development, use the override file:
 ```bash
-docker-compose -f docker-compose.server.yml -f docker-compose.override.yml up -d
+docker compose -f docker-compose.server.yml -f docker-compose.override.yml up -d
 ```
 
 ## Documentation

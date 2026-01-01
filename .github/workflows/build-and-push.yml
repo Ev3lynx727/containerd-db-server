@@ -38,7 +38,7 @@ jobs:
 
     - name: Check Docker Compose configuration
       run: |
-        docker-compose -f docker-compose.server.yml config --quiet
+        docker compose -f docker-compose.server.yml config --quiet
 
     - name: Run linting
       run: |
