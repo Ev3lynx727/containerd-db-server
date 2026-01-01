@@ -1,8 +1,11 @@
 """
 User model for the database connector.
 """
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from .query_history import QueryHistory
 
 
 class User(SQLModel, table=True):

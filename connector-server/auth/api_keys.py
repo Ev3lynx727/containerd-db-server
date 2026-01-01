@@ -61,11 +61,12 @@ def verify_api_key(db: Session, api_key: str) -> Optional[ApiKey]:
     key_hash = hash_api_key(api_key)
     api_key_obj = db.query(ApiKey).filter(
         ApiKey.key_hash == key_hash,
-        ApiKey.is_active == True
+        ApiKey.is_active
     ).first()
 
     # Check expiration if key exists
-    if api_key_obj and api_key_obj.expires_at and api_key_obj.expires_at <= datetime.utcnow():
+    if (api_key_obj and api_key_obj.expires_at and
+            api_key_obj.expires_at <= datetime.utcnow()):
         return None
 
     if api_key_obj:
@@ -76,7 +77,12 @@ def verify_api_key(db: Session, api_key: str) -> Optional[ApiKey]:
     return api_key_obj
 
 
-def get_api_keys(db: Session, client_id: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[ApiKey]:
+def get_api_keys(
+    db: Session,
+    client_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> List[ApiKey]:
     """Get list of API keys."""
     query = db.query(ApiKey)
     if client_id:

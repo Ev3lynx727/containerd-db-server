@@ -3,8 +3,11 @@ Query History model for the database connector.
 """
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from .user import User
 
 
 class QueryStatus(str, PyEnum):

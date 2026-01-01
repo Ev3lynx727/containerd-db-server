@@ -35,7 +35,13 @@ def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
     return db.query(User).offset(skip).limit(limit).all()
 
 
-def create_user(db: Session, username: str, password: str, email: Optional[str] = None, is_active: bool = True) -> User:
+def create_user(
+    db: Session,
+    username: str,
+    password: str,
+    email: Optional[str] = None,
+    is_active: bool = True
+) -> User:
     """Create a new user."""
     hashed_password = get_password_hash(password)
     db_user = User(
