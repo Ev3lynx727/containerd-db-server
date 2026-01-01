@@ -64,7 +64,7 @@ COPY mysql-init.sh /mysql-init.sh
 RUN chmod +x /mysql-init.sh
 
 # Expose ports
-EXPOSE 80 3306 6379 3000
+EXPOSE 80 3306 6380 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

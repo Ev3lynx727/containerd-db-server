@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     database_password: Optional[str] = None
     
     # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = "redis://localhost:6380/0"
     
     # Security
     secret_key: str = "change-this-secret-key"
