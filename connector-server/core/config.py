@@ -129,7 +129,10 @@ class Settings(BaseSettings):
                 protocol_and_creds = v.split("@")[0]
                 host_and_path = "@" + v.split("@")[1]
                 user = protocol_and_creds.split("://")[1].split(":")[0]
-                v = f"{protocol_and_creds.split('://')[0]}://{user}:{info.data['database_password']}{host_and_path}"
+                v = (
+                    f"{protocol_and_creds.split('://')[0]}://{user}:"
+                    f"{info.data['database_password']}{host_and_path}"
+                )
 
         return v
 

@@ -18,7 +18,9 @@ class QueryHistory(SQLModel, table=True):
     __tablename__ = "query_history"
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
-    user_id: Optional[str] = Field(max_length=100, index=True, foreign_key="users.username")
+    user_id: Optional[str] = Field(
+        max_length=100, index=True, foreign_key="users.username"
+    )
     connection_id: Optional[str] = Field(max_length=100)
     query: str = Field(nullable=False)
     execution_time: Optional[float] = None

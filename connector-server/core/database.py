@@ -1,14 +1,12 @@
 """
 Database connection management for the connector API.
 """
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import AsyncAdaptedQueuePool
-
-from sqlmodel import SQLModel
 
 from .config import settings
 
@@ -70,7 +68,9 @@ async def test_connection() -> bool:
 async def get_database_info() -> dict:
     """Get database connection information."""
     return {
-        "database_url": async_database_url.replace(settings.database_password or "", "***"),
+        "database_url": async_database_url.replace(
+            settings.database_password or "", "***"
+        ),
         "pool_size": async_engine.pool.size(),
         "checked_out": async_engine.pool.checkedout(),
         "invalid": async_engine.pool.invalid(),
