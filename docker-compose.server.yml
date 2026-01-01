@@ -2,7 +2,7 @@ services:
   # Database Layer
   mysql-db:
     build:
-      context: ./database
+      context: .
       dockerfile: Dockerfile
     container_name: mysql-db-server
     restart: unless-stopped

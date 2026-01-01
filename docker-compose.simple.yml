@@ -1,0 +1,79 @@
+services:
+  # Monolithic container with all services (MySQL, Redis, FastAPI, Nginx)
+  database-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: containerd-db-server
+    restart: unless-stopped
+    secrets:
+      - mysql_root_password
+      - mysql_password
+      - api_secret_key
+    environment:
+      - CONNECTOR_SERVER_MODE=production
+      - CONNECTOR_DATABASE_URL=mysql://connector_user:connector_user_password_2024@localhost:3306/connector_db
+      - CONNECTOR_REDIS_URL=redis://localhost:6380/0
+      - CONNECTOR_SECRET_KEY=fec4c9221250a5be9870a4b1de91de12b182690271879b1f06cb0d763bd2822e
+      - CONNECTOR_API_PORT=3000
+      - CONNECTOR_DEBUG=false
+      - CONNECTOR_CORS_ORIGINS=["http://localhost:3000","http://localhost:8080"]
+      - CONNECTOR_LOG_LEVEL=INFO
+      - CONNECTOR_MAX_CONNECTIONS=100
+      - CONNECTOR_CONNECTION_TIMEOUT=30
+      - CONNECTOR_RATE_LIMIT_REQUESTS=100
+      - CONNECTOR_RATE_LIMIT_WINDOW_SECONDS=60
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - mysql_logs:/var/log/mysql
+      - redis_data:/data
+      - redis_logs:/var/log/redis
+      - nginx_logs:/var/log/nginx
+      - api_logs:/app/logs
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./database/conf.d:/etc/mysql/mysql.conf.d:ro
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "${DB_PORT:-3307}:3306"
+      - "${API_PORT:-3001}:3000"
+      - "${REDIS_PORT:-6380}:6380"
+      - "${HTTP_PORT:-8080}:80"
+      - "${HTTPS_PORT:-8444}:443"
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:3000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "org.opencontainers.image.title=Database Connector Server"
+      - "org.opencontainers.image.description=Monolithic container with MySQL, Redis, FastAPI, and Nginx"
+
+secrets:
+  mysql_root_password:
+    file: ./secrets/mysql_root_password.txt
+  mysql_password:
+    file: ./secrets/mysql_password.txt
+  api_secret_key:
+    file: ./secrets/api_secret_key.txt
+
+volumes:
+  mysql_data:
+    driver: local
+  mysql_logs:
+    driver: local
+  redis_data:
+    driver: local
+  redis_logs:
+    driver: local
+  api_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  database_network:
+    driver: bridge
