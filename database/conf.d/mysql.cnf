@@ -13,8 +13,8 @@ init_connect = 'SET NAMES utf8mb4'
 innodb-buffer-pool-size = 256M
 innodb-log-file-size = 64M
 max-connections = 200
-query-cache-size = 64M
-query-cache-type = ON
+# query-cache-size removed in MySQL 8.0
+# query-cache-type removed in MySQL 8.0
 
 # Security settings
 skip-name-resolve

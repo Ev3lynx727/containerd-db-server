@@ -31,8 +31,8 @@ myisam-sort-buffer-size = 64M
 
 # Binary logging (for replication)
 log-bin = mysql-bin
-binlog-format = ROW
-expire-logs-days = 7
+# binlog-format = ROW  # Default is ROW in MySQL 8.0
+binlog_expire_logs_seconds = 604800  # 7 days instead of expire-logs-days
 max-binlog-size = 100M
 
 # Slow query log
