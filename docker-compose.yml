@@ -1,0 +1,36 @@
+version: '3.8'
+
+networks:
+  database_network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  api_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  mysql_data:
+    driver: local
+  mysql_logs:
+    driver: local
+  redis_data:
+    driver: local
+  redis_logs:
+    driver: local
+  api_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+secrets:
+  mysql_root_password:
+    file: ./secrets/mysql_root_password.txt
+  mysql_password:
+    file: ./secrets/mysql_password.txt
+  api_secret_key:
+    file: ./secrets/api_secret_key.txt

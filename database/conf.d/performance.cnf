@@ -1,0 +1,41 @@
+[mysqld]
+# Performance optimization settings
+innodb-buffer-pool-size = 512M
+innodb-log-file-size = 128M
+innodb-flush-log-at-trx-commit = 2
+innodb-flush-method = O_DIRECT
+innodb-thread-concurrency = 8
+
+# Query cache
+query-cache-size = 128M
+query-cache-type = ON
+query-cache-limit = 2M
+
+# Connection settings
+max-connections = 200
+max-connect-errors = 100000
+wait-timeout = 28800
+interactive-timeout = 28800
+
+# Table cache
+table-open-cache = 4096
+table-definition-cache = 4096
+
+# Temporary tables
+tmp-table-size = 128M
+max-heap-table-size = 128M
+
+# MyISAM settings (if needed)
+key-buffer-size = 64M
+myisam-sort-buffer-size = 64M
+
+# Binary logging (for replication)
+log-bin = mysql-bin
+binlog-format = ROW
+expire-logs-days = 7
+max-binlog-size = 100M
+
+# Slow query log
+slow-query-log = ON
+long-query-time = 1
+log-queries-not-using-indexes = ON

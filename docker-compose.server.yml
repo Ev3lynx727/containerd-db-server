@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+  # Database Layer
+  mysql-db:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: mysql-db-server
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_DATABASE: connector_db
+      MYSQL_USER: connector_user
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+    secrets:
+      - mysql_root_password
+      - mysql_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - mysql_logs:/var/log/mysql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./database/conf.d:/etc/mysql/conf.d:ro
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=200
+    labels:
+      - "org.opencontainers.image.title=MySQL Database Server"
+      - "org.opencontainers.image.description=MySQL 8.0 with custom configuration for database connector"
+
+  # API Layer
+  connector-api:
+    build:
+      context: ./connector-server
+      dockerfile: Dockerfile
+    container_name: connector-api-server
+    restart: unless-stopped
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    secrets:
+      - api_secret_key
+    environment:
+      - DATABASE_URL=mysql://connector_user:${MYSQL_PASSWORD}@mysql-db:3306/connector_db
+      - REDIS_URL=redis://redis-cache:6379/0
+      - SECRET_KEY_FILE=/run/secrets/api_secret_key
+      - API_KEYS_ENABLED=true
+      - SERVER_MODE=production
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - LOG_LEVEL=INFO
+      - API_PORT=3000
+    volumes:
+      - ./connector-server:/app:ro
+      - api_logs:/app/logs
+    ports:
+      - "${API_PORT:-3000}:3000"
+    networks:
+      - database_network
+      - api_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "org.opencontainers.image.title=Database Connector API"
+      - "org.opencontainers.image.description=FastAPI server for database operations with security"
+
+  # Cache Layer
+  redis-cache:
+    build:
+      context: ./redis
+      dockerfile: Dockerfile
+    container_name: redis-cache-server
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+      - redis_logs:/var/log/redis
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - database_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    labels:
+      - "org.opencontainers.image.title=Redis Cache Server"
+      - "org.opencontainers.image.description=Redis 7 with persistence and monitoring"
+
+  # Proxy Layer
+  nginx-proxy:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: nginx-proxy-server
+    restart: unless-stopped
+    depends_on:
+      - connector-api
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/ssl/certs:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - api_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "org.opencontainers.image.title=Nginx Reverse Proxy"
+      - "org.opencontainers.image.description=Nginx with SSL and load balancing"
+
+   # Monitoring Integration (Netdata)
+   # Note: Monitoring is handled by existing Netdata container on DEV VM (localhost:19999)
+   # Mount Docker socket for container monitoring: -v /var/run/docker.sock:/var/run/docker.sock:ro
+   # Configure Netdata docker.conf to monitor: mysql-db, redis-cache, connector-api, nginx-proxy
+
+networks:
+  database_network:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  api_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  mysql_data:
+    driver: local
+  mysql_logs:
+    driver: local
+  redis_data:
+    driver: local
+  redis_logs:
+    driver: local
+  api_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+secrets:
+  mysql_root_password:
+    file: ./secrets/mysql_root_password.txt
+  mysql_password:
+    file: ./secrets/mysql_password.txt
+  api_secret_key:
+    file: ./secrets/api_secret_key.txt

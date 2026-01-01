@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  mysql-db:
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_PASSWORD: userpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+
+  connector-api:
+    environment:
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./connector-server:/app
+    ports:
+      - "3000:3000"
+
+  redis-cache:
+    ports:
+      - "6379:6379"
+
+  nginx-proxy:
+    ports:
+      - "80:80"
+      - "8080:443"
