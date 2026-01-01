@@ -33,7 +33,7 @@ async def root():
     return {
         "name": "Database Connector API Server",
         "version": "1.0.0",
-        "description": "Production-ready database connector with MySQL, Redis, and FastAPI",
+        "description": "Production-ready database connector with MySQL, Redis, FastAPI",
         "status": "operational",
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "endpoints": {
