@@ -26,8 +26,6 @@ async_engine = create_async_engine(
 )
 
 AsyncSessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
     bind=async_engine,
     class_=AsyncSession,
 )
