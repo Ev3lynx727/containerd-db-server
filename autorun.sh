@@ -8,8 +8,6 @@ set -e  # Exit on any error
 # Configuration - can be overridden by environment variables
 IMAGE_NAME="${IMAGE_NAME:-ghcr.io/ev3lynx727/containerd-db-server:latest}"
 CONTAINER_NAME="${CONTAINER_NAME:-containerd-db-server}"
-HOST_PORT="${HOST_PORT:-80}"
-DATA_DIR="${DATA_DIR:-./data}"
 LOGS_DIR="${LOGS_DIR:-./logs}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 
@@ -73,9 +71,17 @@ if [ "$DISK_SPACE" -lt 1048576 ]; then  # Less than 1GB
     warning "Low disk space detected: $(($DISK_SPACE / 1024))MB available"
 fi
 
-# Check if port is available
-if lsof -Pi :$HOST_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
-    warning "Port $HOST_PORT is already in use"
+# Check if required ports are available
+PORTS_IN_USE=""
+for port in 3307 3003 6380 8083 8444; do
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        PORTS_IN_USE="$PORTS_IN_USE $port"
+    fi
+done
+
+if [ -n "$PORTS_IN_USE" ]; then
+    warning "Ports$PORTS_IN_USE are already in use"
+    info "Required ports: MySQL(3307), API(3003), Redis(6380), HTTP(8083), HTTPS(8444)"
     read -p "Continue anyway? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -83,9 +89,9 @@ if lsof -Pi :$HOST_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
     fi
 fi
 
-# Create necessary directories
-mkdir -p "$DATA_DIR/mysql" "$DATA_DIR/redis" "$LOGS_DIR" "$BACKUP_DIR"
-success "Created data directories"
+# Create necessary directories (using named volumes, but ensure logs exist)
+mkdir -p "$LOGS_DIR" "$BACKUP_DIR"
+success "Created log and backup directories"
 
 # Check if container exists and handle it
 if docker ps -a --format 'table {{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -123,36 +129,38 @@ while [ $pull_attempt -le $max_pull_attempts ]; do
     fi
 done
 
-# Run the container with enhanced options
-log "Starting container with persistent volumes..."
-
-# Set environment variables for container
-ENV_VARS=""
-if [ -n "$DB_ROOT_PASSWORD" ]; then
-    ENV_VARS="$ENV_VARS -e DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD"
-fi
-if [ -n "$API_SECRET_KEY" ]; then
-    ENV_VARS="$ENV_VARS -e API_SECRET_KEY=$API_SECRET_KEY"
-fi
+# Run the container with all services (MySQL, Redis, FastAPI, Nginx)
+log "Starting monolithic container with all services..."
 
 docker run -d \
     --name "$CONTAINER_NAME" \
+    --env-file .env.updated \
     --restart unless-stopped \
-    -p "$HOST_PORT":80 \
-    -v "$DATA_DIR/mysql:/var/lib/mysql" \
-    -v "$DATA_DIR/redis:/data" \
-    -v "$LOGS_DIR:/app/logs" \
-    --health-cmd "curl -f http://localhost/health || exit 1" \
+    -p 3307:3306 \
+    -p 3003:3000 \
+    -p 6380:6380 \
+    -p 8083:80 \
+    -p 8444:443 \
+    -v mysql_data:/var/lib/mysql \
+    -v mysql_logs:/var/log/mysql \
+    -v redis_data:/data \
+    -v redis_logs:/var/log/redis \
+    -v nginx_logs:/var/log/nginx \
+    -v api_logs:/app/logs \
+    -v ./database/init:/docker-entrypoint-initdb.d:ro \
+    -v ./database/conf.d:/etc/mysql/mysql.conf.d:ro \
+    -v ./redis/redis.conf:/etc/redis/redis.conf:ro \
+    -v ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+    --health-cmd "python3 -c \"import requests; requests.get('http://localhost:3000/health')\" || exit 1" \
     --health-interval 30s \
     --health-timeout 10s \
     --health-retries 3 \
-    --health-start-period 120s \
+    --health-start-period 60s \
     --memory 1g \
     --cpus 1.0 \
     --log-driver json-file \
     --log-opt max-size=10m \
     --log-opt max-file=3 \
-    $ENV_VARS \
     "$IMAGE_NAME"
 
 if [ $? -ne 0 ]; then
@@ -210,21 +218,26 @@ CONTAINER_ID=$(docker ps -q -f name="$CONTAINER_NAME")
 CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER_NAME" 2>/dev/null || echo "N/A")
 
 echo ""
-echo "🎉 Database Connector Server Deployment Complete!"
-echo "=================================================="
 success "Container Information:"
 echo "  Container ID: $CONTAINER_ID"
 echo "  Container Name: $CONTAINER_NAME"
 echo "  Container IP: $CONTAINER_IP"
-echo "  Host Port: $HOST_PORT"
-echo "  Data Directory: $DATA_DIR"
+echo "  Port Mappings:"
+echo "    MySQL: 3307 → 3306"
+echo "    API: 3003 → 3000"
+echo "    Redis: 6380 → 6380"
+echo "    HTTP: 8083 → 80"
+echo "    HTTPS: 8444 → 443"
 echo "  Logs Directory: $LOGS_DIR"
 
 echo ""
 success "Access URLs:"
-echo "  🌐 Web Interface: http://localhost:$HOST_PORT"
-echo "  🏥 Health Check: http://localhost:$HOST_PORT/health"
-echo "  📚 API Docs: http://localhost:$HOST_PORT/docs (if available)"
+echo "  🌐 Web Interface: http://localhost:8083"
+echo "  🏥 API Health Check: http://localhost:3003/health"
+echo "  📚 API Docs: http://localhost:3003/docs"
+echo "  📖 API ReDoc: http://localhost:3003/redoc"
+echo "  🗄️  MySQL: localhost:3307"
+echo "  🔄 Redis: localhost:6380"
 
 echo ""
 info "Management Commands:"
@@ -236,10 +249,13 @@ echo "  📊 Container stats: docker stats $CONTAINER_NAME"
 echo "  🔍 Inspect container: docker inspect $CONTAINER_NAME"
 
 echo ""
-info "Data Persistence:"
-echo "  MySQL data: $DATA_DIR/mysql"
-echo "  Redis data: $DATA_DIR/redis"
-echo "  Application logs: $LOGS_DIR"
+info "Data Persistence (Docker Named Volumes):"
+echo "  MySQL data: mysql_data"
+echo "  Redis data: redis_data"
+echo "  MySQL logs: mysql_logs"
+echo "  Redis logs: redis_logs"
+echo "  Nginx logs: nginx_logs"
+echo "  API logs: api_logs"
 echo "  Backups: $BACKUP_DIR"
 
 echo ""
@@ -247,7 +263,7 @@ info "Auto-restart: Container will restart automatically on system reboot"
 echo "Deployment log: $LOG_FILE"
 
 # Final verification
-if curl -f -s "http://localhost:$HOST_PORT/health" >/dev/null 2>&1; then
+if curl -f -s "http://localhost:3003/health" >/dev/null 2>&1; then
     success "Health check passed - all systems operational!"
 else
     warning "Health check failed - services may still be starting"
