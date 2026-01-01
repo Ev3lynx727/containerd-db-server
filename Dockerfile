@@ -58,6 +58,8 @@ RUN useradd --create-home --shell /bin/bash app \
 
 # Create supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY mysql-init.sh /mysql-init.sh
+RUN chmod +x /mysql-init.sh
 
 # Expose ports
 EXPOSE 80 3306 6379 3000
