@@ -57,7 +57,7 @@ services:
       - api_secret_key
     environment:
       - DATABASE_URL=mysql://connector_user:${MYSQL_PASSWORD}@mysql-db:3306/connector_db
-      - REDIS_URL=redis://redis-cache:6379/0
+      - REDIS_URL=redis://redis-cache:6380/0
       - SECRET_KEY_FILE=/run/secrets/api_secret_key
       - API_KEYS_ENABLED=true
       - SERVER_MODE=production

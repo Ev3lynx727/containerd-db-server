@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual triggering
 
 env:
   REGISTRY: ghcr.io
@@ -35,10 +36,27 @@ jobs:
         cd connector-server
         pip install -r requirements.txt
 
+    - name: Check Docker Compose configuration
+      run: |
+        docker-compose -f docker-compose.server.yml config --quiet
+
+    - name: Run linting
+      run: |
+        cd connector-server
+        python -m flake8 . --max-line-length=88 --extend-ignore=E203,W503
+        python -m mypy . --ignore-missing-imports
+
+    - name: Test imports and basic functionality
+      run: |
+        cd connector-server
+        python -c "from core.config import settings; print('Settings loaded successfully')"
+        python -c "from models import User, ApiKey, QueryHistory; print('Models imported successfully')"
+        python -c "from core.database import get_async_db; print('Async database setup works')"
+
     - name: Run tests
       run: |
         cd connector-server
-        python -m pytest tests/ -v --tb=short
+        python -m pytest tests/ -v --tb=short --cov=connector_server --cov-report=term-missing
       continue-on-error: true  # Allow build to continue even if tests fail initially
 
   build-and-push:

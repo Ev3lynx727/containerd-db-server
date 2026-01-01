@@ -52,11 +52,11 @@ def verify_token(token: str, credentials_exception) -> TokenData:
     """Verify and decode a JWT token."""
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        client_id: str = payload.get("sub")
+        client_id = payload.get("sub")
         scopes: list = payload.get("scopes", [])
         if client_id is None:
             raise credentials_exception
-        token_data = TokenData(client_id=client_id, scopes=scopes)
+        token_data = TokenData(client_id=str(client_id), scopes=scopes)
     except JWTError:
         raise credentials_exception
     return token_data
