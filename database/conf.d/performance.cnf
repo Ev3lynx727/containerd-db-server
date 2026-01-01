@@ -6,10 +6,10 @@ innodb-flush-log-at-trx-commit = 2
 innodb-flush-method = O_DIRECT
 innodb-thread-concurrency = 8
 
-# Query cache
-query-cache-size = 128M
-query-cache-type = ON
-query-cache-limit = 2M
+# Query cache removed in MySQL 8.0
+# query-cache-size = 128M
+# query-cache-type = ON
+# query-cache-limit = 2M
 
 # Connection settings
 max-connections = 200
