@@ -56,9 +56,6 @@ RUN mkdir -p /var/log/nginx /var/cache/nginx \
 RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /app
 
-# Initialize MySQL data directory
-RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql
-
 # Create supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
@@ -68,6 +65,9 @@ EXPOSE 80 3306 6379 3000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost/health || exit 1
+
+# Switch to root for supervisor (services need different users)
+USER root
 
 # Start supervisor
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
