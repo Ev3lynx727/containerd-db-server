@@ -40,13 +40,15 @@ COPY redis/redis.conf /etc/redis/redis.conf
 # Copy Nginx config
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
-# Create MySQL data directory
+# Create MySQL data directory with correct permissions
 RUN mkdir -p /var/lib/mysql /var/log/mysql /var/run/mysqld \
-    && chown -R mysql:mysql /var/lib/mysql /var/log/mysql /var/run/mysqld
+    && chown -R mysql:mysql /var/lib/mysql /var/log/mysql /var/run/mysqld \
+    && chmod 750 /var/lib/mysql
 
-# Create Redis data directory
-RUN mkdir -p /var/lib/redis /var/log/redis \
-    && chown -R redis:redis /var/lib/redis /var/log/redis
+# Create Redis data directory with correct permissions
+RUN mkdir -p /data /var/log/redis \
+    && chown -R redis:redis /data /var/log/redis \
+    && chmod 750 /data
 
 # Create Nginx directories
 RUN mkdir -p /var/log/nginx /var/cache/nginx \
